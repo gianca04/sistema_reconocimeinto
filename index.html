@@ -1,73 +1,138 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediaPipe Hands - Ejemplo Básico</title>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
-        video, canvas {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        canvas {
-            z-index: 1;
-        }
-    </style>
+    <title>MediaPipe Hands - Captura de Gestos</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-    <video id="video" autoplay muted></video>
-    <canvas id="outputCanvas"></canvas>
+    <div class="container">
+        <h1>Captura de Gestos con MediaPipe</h1>
+
+        <!-- Selector de Modo -->
+        <div class="mode-selector">
+            <button id="captureMode" class="mode-btn active">Modo Registro</button>
+            <button id="practiceMode" class="mode-btn">Modo Práctica</button>
+            <button id="recognizeMode" class="mode-btn">Modo Reconocimiento</button>
+        </div>
+
+        <!-- Modo Captura -->
+        <div id="captureModeContent" class="mode-content active">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="gestureName">Nombre del Gesto:</label>
+                    <input type="text" id="gestureName" placeholder="Ej: ¿Dónde vives?, Hola, Gracias">
+                </div>
+                <button id="startSequenceBtn" class="btn btn-primary">Iniciar Secuencia</button>
+                <button id="captureBtn" class="btn btn-success" disabled>Capturar Frame <span
+                        id="frameNumber">1</span></button>
+                <button id="finishSequenceBtn" class="btn btn-success" disabled>Finalizar Secuencia</button>
+                <button id="clearFramesBtn" class="btn btn-danger">Limpiar Frames</button>
+            </div>
+            <div class="sequence-status" id="sequenceStatus">
+                <p><strong>Estado:</strong> <span id="sequenceStatusText">Presiona "Iniciar Secuencia" para
+                        comenzar</span></p>
+                <div class="progress-bar hidden" id="progressContainer">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <span class="progress-text" id="progressText">0/0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modo Práctica -->
+        <div id="practiceModeContent" class="mode-content">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="practiceGesture">Seleccionar Gesto:</label>
+                    <select id="practiceGesture">
+                        <option value="">-- Selecciona un gesto --</option>
+                    </select>
+                </div>
+                <button id="startPracticeBtn" class="btn btn-primary">Iniciar Práctica</button>
+                <button id="stopPracticeBtn" class="btn btn-danger" disabled>Detener Práctica</button>
+                <div class="input-group">
+                    <label for="similarityThreshold">Umbral de Similitud:</label>
+                    <input type="range" id="similarityThreshold" min="70" max="95" step="5" value="80">
+                    <span id="thresholdValue">80%</span>
+                </div>
+            </div>
+            <div class="practice-status" id="practiceStatus">
+                <div class="current-frame-indicator" id="currentFrameIndicator">
+                    <h3>Frame Objetivo: <span id="targetFrameNumber">-</span></h3>
+                    <div class="frame-progress" id="frameProgress"></div>
+                </div>
+                <div class="similarity-display" id="similarityDisplay">
+                    <h4>Similitud Actual: <span id="currentSimilarity">0%</span></h4>
+                    <div class="similarity-bar-container">
+                        <div class="similarity-bar" id="similarityBar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modo Reconocimiento -->
+        <div id="recognizeModeContent" class="mode-content">
+            <div class="controls">
+                <button id="startRecognitionBtn" class="btn btn-primary">Iniciar Reconocimiento</button>
+                <button id="stopRecognitionBtn" class="btn btn-danger" disabled>Detener</button>
+                <div class="input-group">
+                    <label for="toleranceSlider">Tolerancia:</label>
+                    <input type="range" id="toleranceSlider" min="0.1" max="0.9" step="0.1" value="0.7">
+                    <span id="toleranceValue">70%</span>
+                </div>
+            </div>
+        </div>
+        <div class="video-container">
+            <video id="video" autoplay muted></video>
+            <canvas id="outputCanvas"></canvas>
+        </div>
+
+        <div class="status">
+            <p>Estado: <span id="statusText">Listo para capturar</span></p>
+            <p class="frame-count">Frames capturados: <span id="frameCount">0</span></p>
+        </div>
+
+        <!-- Resultados de Reconocimiento -->
+        <div id="recognitionResults" class="recognition-results">
+            <h3>Resultado del Reconocimiento</h3>
+            <div class="result-display">
+                <div class="recognized-gesture">
+                    <span id="recognizedGesture">---</span>
+                </div>
+                <div class="confidence-display">
+                    <div class="confidence-bar-container">
+                        <div class="confidence-bar" id="confidenceBar"></div>
+                    </div>
+                    <span id="confidenceText">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gesture-info" id="captureInfo">
+            <h3>Frames del Gesto Actual</h3>
+            <div id="currentFrames">No hay frames capturados</div>
+        </div>
+
+        <div class="gesture-list" id="gestureListSection">
+            <h3>Gestos Guardados</h3>
+            <div id="savedGestures">No hay gestos guardados</div>
+        </div>
+
+        <div class="export-section">
+            <button id="exportBtn" class="btn btn-primary">Exportar Dataset</button>
+            <button id="importBtn" class="btn btn-success">Importar Dataset</button>
+            <input type="file" id="importFile" accept=".json" title="Seleccionar archivo JSON para importar">
+            <button id="clearAllBtn" class="btn btn-danger">Limpiar Todo</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-    <script>
-        const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('outputCanvas');
-        const canvasCtx = canvasElement.getContext('2d');
-
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-
-        hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        hands.onResults((results) => {
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks) {
-                for (const landmarks of results.multiHandLandmarks) {
-                    drawConnectors(canvasCtx, landmarks, Hands.HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
-                    drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 1 });
-                }
-            }
-        });
-
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
-
-        camera.start();
-    </script>
+    <script src="script.js"></script>
 </body>
+
 </html>
