@@ -355,6 +355,126 @@
                 min-width: 150px;
             }
         }
+
+        /* Estilos para secuencias y práctica */
+        .sequence-status, .practice-status {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e9ecef;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #28a745);
+            border-radius: 12px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            color: #333;
+            z-index: 1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .current-frame-indicator {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .frame-progress {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .frame-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #dee2e6;
+            border: 2px solid #adb5bd;
+            transition: all 0.3s ease;
+        }
+
+        .frame-dot.completed {
+            background: #28a745;
+            border-color: #1e7e34;
+        }
+
+        .frame-dot.current {
+            background: #ffc107;
+            border-color: #e0a800;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .similarity-display {
+            text-align: center;
+        }
+
+        .similarity-bar-container {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .similarity-bar {
+            height: 100%;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            width: 0%;
+        }
+
+        #practiceGesture {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        .success-animation {
+            border-color: #28a745 !important;
+            animation: success-glow 1s ease-in-out;
+        }
+
+        @keyframes success-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(40, 167, 69, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(40, 167, 69, 0.8); }
+        }
     </style>
 </head>
 <body>
@@ -363,7 +483,8 @@
         
         <!-- Selector de Modo -->
         <div class="mode-selector">
-            <button id="captureMode" class="mode-btn active">📚 Modo Captura</button>
+            <button id="captureMode" class="mode-btn active">📚 Modo Registro</button>
+            <button id="practiceMode" class="mode-btn">🎯 Modo Práctica</button>
             <button id="recognizeMode" class="mode-btn">🔍 Modo Reconocimiento</button>
         </div>
         
@@ -372,11 +493,50 @@
             <div class="controls">
                 <div class="input-group">
                     <label for="gestureName">Nombre del Gesto:</label>
-                    <input type="text" id="gestureName" placeholder="Ej: Hola, Gracias, Amor">
+                    <input type="text" id="gestureName" placeholder="Ej: ¿Dónde vives?, Hola, Gracias">
                 </div>
-                <button id="captureBtn" class="btn btn-primary">📸 Capturar Frame</button>
-                <button id="saveGestureBtn" class="btn btn-success" disabled>💾 Guardar Gesto</button>
+                <button id="startSequenceBtn" class="btn btn-primary">🎬 Iniciar Secuencia</button>
+                <button id="captureBtn" class="btn btn-success" disabled>📸 Capturar Frame <span id="frameNumber">1</span></button>
+                <button id="finishSequenceBtn" class="btn btn-success" disabled>✅ Finalizar Secuencia</button>
                 <button id="clearFramesBtn" class="btn btn-danger">🗑️ Limpiar Frames</button>
+            </div>
+            <div class="sequence-status" id="sequenceStatus">
+                <p><strong>Estado:</strong> <span id="sequenceStatusText">Presiona "Iniciar Secuencia" para comenzar</span></p>
+                <div class="progress-bar hidden" id="progressContainer">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <span class="progress-text" id="progressText">0/0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modo Práctica -->
+        <div id="practiceModeContent" class="mode-content">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="practiceGesture">Seleccionar Gesto:</label>
+                    <select id="practiceGesture">
+                        <option value="">-- Selecciona un gesto --</option>
+                    </select>
+                </div>
+                <button id="startPracticeBtn" class="btn btn-primary">🎯 Iniciar Práctica</button>
+                <button id="stopPracticeBtn" class="btn btn-danger" disabled>⏹️ Detener Práctica</button>
+                <div class="input-group">
+                    <label for="similarityThreshold">Umbral de Similitud:</label>
+                    <input type="range" id="similarityThreshold" min="70" max="95" step="5" value="80">
+                    <span id="thresholdValue">80%</span>
+                </div>
+            </div>
+            <div class="practice-status" id="practiceStatus">
+                <div class="current-frame-indicator" id="currentFrameIndicator">
+                    <h3>Frame Objetivo: <span id="targetFrameNumber">-</span></h3>
+                    <div class="frame-progress" id="frameProgress"></div>
+                </div>
+                <div class="similarity-display" id="similarityDisplay">
+                    <h4>Similitud Actual: <span id="currentSimilarity">0%</span></h4>
+                    <div class="similarity-bar-container">
+                        <div class="similarity-bar" id="similarityBar"></div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -445,6 +605,7 @@
                 this.savedGestures = this.loadSavedGestures();
                 this.isCapturing = false;
                 this.isRecognizing = false;
+                this.isPracticing = false;
                 this.hands = null;
                 this.camera = null;
                 this.lastResults = null;
@@ -452,6 +613,18 @@
                 this.recognitionTolerance = 0.7;
                 this.recognitionBuffer = [];
                 this.maxBufferSize = 10;
+                
+                // Nuevas propiedades para secuencias
+                this.isRecordingSequence = false;
+                this.currentFrameIndex = 0;
+                this.maxFramesPerGesture = 10; // Máximo de frames por gesto
+                
+                // Propiedades para práctica
+                this.practiceGesture = null;
+                this.practiceFrameIndex = 0;
+                this.similarityThreshold = 80; // Porcentaje
+                this.practiceBuffer = [];
+                this.lastSimilarityCheck = 0;
                 
                 this.initializeElements();
                 this.initializeMediaPipe();
@@ -522,18 +695,30 @@
                     if (this.isRecognizing) {
                         this.processRecognition(results);
                     }
+                    
+                    // Procesar práctica si está activa
+                    if (this.isPracticing) {
+                        this.processPractice(results);
+                    }
                 }
             }
 
             initializeEventListeners() {
                 // Eventos de modo
                 document.getElementById('captureMode').addEventListener('click', () => this.switchMode('capture'));
+                document.getElementById('practiceMode').addEventListener('click', () => this.switchMode('practice'));
                 document.getElementById('recognizeMode').addEventListener('click', () => this.switchMode('recognize'));
 
-                // Eventos de captura
+                // Eventos de captura secuencial
+                document.getElementById('startSequenceBtn').addEventListener('click', () => this.startSequence());
                 document.getElementById('captureBtn').addEventListener('click', () => this.captureFrame());
-                document.getElementById('saveGestureBtn').addEventListener('click', () => this.saveGesture());
+                document.getElementById('finishSequenceBtn').addEventListener('click', () => this.finishSequence());
                 document.getElementById('clearFramesBtn').addEventListener('click', () => this.clearCurrentFrames());
+                
+                // Eventos de práctica
+                document.getElementById('startPracticeBtn').addEventListener('click', () => this.startPractice());
+                document.getElementById('stopPracticeBtn').addEventListener('click', () => this.stopPractice());
+                document.getElementById('similarityThreshold').addEventListener('input', (e) => this.updateSimilarityThreshold(e));
                 
                 // Eventos de reconocimiento
                 document.getElementById('startRecognitionBtn').addEventListener('click', () => this.startRecognition());
@@ -547,17 +732,44 @@
                 document.getElementById('clearAllBtn').addEventListener('click', () => this.clearAllGestures());
             }
 
+            // === FUNCIONES DE REGISTRO SECUENCIAL ===
+            startSequence() {
+                const gestureName = this.gestureNameInput.value.trim();
+                if (!gestureName) {
+                    alert('Por favor ingresa un nombre para el gesto.');
+                    return;
+                }
+
+                this.isRecordingSequence = true;
+                this.currentFrameIndex = 0;
+                this.currentFrames = [];
+                
+                // Actualizar UI
+                document.getElementById('startSequenceBtn').disabled = true;
+                document.getElementById('captureBtn').disabled = false;
+                document.getElementById('finishSequenceBtn').disabled = false;
+                document.getElementById('gestureName').disabled = true;
+                
+                // Mostrar barra de progreso
+                const progressContainer = document.getElementById('progressContainer');
+                progressContainer.classList.remove('hidden');
+                
+                this.updateSequenceStatus();
+                this.statusText.textContent = `Secuencia iniciada para "${gestureName}" - Captura Frame 1`;
+            }
+
             captureFrame() {
                 if (!this.lastResults || !this.lastResults.multiHandLandmarks) {
                     alert('No se detectan manos. Asegúrate de que tu mano esté visible.');
                     return;
                 }
 
-                const gestureName = this.gestureNameInput.value.trim();
-                if (!gestureName) {
-                    alert('Por favor ingresa un nombre para el gesto.');
+                if (!this.isRecordingSequence) {
+                    alert('Primero debes iniciar una secuencia.');
                     return;
                 }
+
+                const gestureName = this.gestureNameInput.value.trim();
 
                 // Capturar frame actual
                 const frame = {
@@ -565,33 +777,36 @@
                     timestamp: new Date().toISOString(),
                     landmarks: this.lastResults.multiHandLandmarks,
                     handedness: this.lastResults.multiHandedness || [],
-                    gestureName: gestureName
+                    gestureName: gestureName,
+                    frameIndex: this.currentFrameIndex
                 };
 
                 this.currentFrames.push(frame);
-                this.updateDisplay();
+                this.currentFrameIndex++;
 
                 // Feedback visual
                 this.canvasElement.classList.add('recording');
                 setTimeout(() => {
                     this.canvasElement.classList.remove('recording');
-                }, 200);
+                }, 300);
 
-                this.statusText.textContent = `Frame capturado para "${gestureName}"`;
+                this.updateSequenceStatus();
+                
+                if (this.currentFrameIndex >= this.maxFramesPerGesture) {
+                    this.statusText.textContent = `Frame ${this.currentFrameIndex} capturado - Secuencia completa, presiona "Finalizar"`;
+                    document.getElementById('captureBtn').disabled = true;
+                } else {
+                    this.statusText.textContent = `Frame ${this.currentFrameIndex} capturado - Listo para Frame ${this.currentFrameIndex + 1}`;
+                }
             }
 
-            saveGesture() {
-                const gestureName = this.gestureNameInput.value.trim();
-                
-                if (!gestureName) {
-                    alert('Por favor ingresa un nombre para el gesto.');
-                    return;
-                }
-
+            finishSequence() {
                 if (this.currentFrames.length === 0) {
                     alert('No hay frames para guardar.');
                     return;
                 }
+
+                const gestureName = this.gestureNameInput.value.trim();
 
                 // Crear objeto del gesto
                 const gesture = {
@@ -599,23 +814,273 @@
                     name: gestureName,
                     frames: [...this.currentFrames],
                     frameCount: this.currentFrames.length,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    isSequential: true
                 };
 
                 // Guardar en array de gestos
                 this.savedGestures.push(gesture);
                 this.saveSavedGestures();
 
-                // Limpiar frames actuales
-                this.currentFrames = [];
-                this.gestureNameInput.value = '';
+                // Resetear estado
+                this.resetSequenceState();
                 
                 this.updateDisplay();
-                this.statusText.textContent = `Gesto "${gestureName}" guardado con ${gesture.frameCount} frames`;
+                this.updatePracticeGestureList();
+                this.statusText.textContent = `✅ Gesto "${gestureName}" guardado con ${gesture.frameCount} frames secuenciales`;
+            }
+
+            resetSequenceState() {
+                this.isRecordingSequence = false;
+                this.currentFrameIndex = 0;
+                this.currentFrames = [];
+                this.gestureNameInput.value = '';
+                this.gestureNameInput.disabled = false;
+                
+                // Resetear botones
+                document.getElementById('startSequenceBtn').disabled = false;
+                document.getElementById('captureBtn').disabled = true;
+                document.getElementById('finishSequenceBtn').disabled = true;
+                
+                // Ocultar barra de progreso
+                document.getElementById('progressContainer').classList.add('hidden');
+                
+                document.getElementById('sequenceStatusText').textContent = 'Presiona "Iniciar Secuencia" para comenzar';
+            }
+
+            updateSequenceStatus() {
+                const statusText = document.getElementById('sequenceStatusText');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                
+                if (this.isRecordingSequence) {
+                    statusText.textContent = `Capturando secuencia - Frame ${this.currentFrameIndex + 1} de ${this.maxFramesPerGesture}`;
+                    
+                    const progress = (this.currentFrames.length / this.maxFramesPerGesture) * 100;
+                    progressFill.style.width = progress + '%';
+                    progressText.textContent = `${this.currentFrames.length}/${this.maxFramesPerGesture}`;
+                    
+                    // Actualizar número de frame en el botón
+                    document.getElementById('frameNumber').textContent = this.currentFrameIndex + 1;
+                }
+            }
+
+            // === FUNCIONES DE PRÁCTICA SECUENCIAL ===
+            startPractice() {
+                const selectedGestureId = document.getElementById('practiceGesture').value;
+                if (!selectedGestureId) {
+                    alert('Por favor selecciona un gesto para practicar.');
+                    return;
+                }
+
+                this.practiceGesture = this.savedGestures.find(g => g.id == selectedGestureId);
+                if (!this.practiceGesture) {
+                    alert('Gesto no encontrado.');
+                    return;
+                }
+
+                this.isPracticing = true;
+                this.practiceFrameIndex = 0;
+                this.practiceBuffer = [];
+                
+                // Actualizar UI
+                document.getElementById('startPracticeBtn').disabled = true;
+                document.getElementById('stopPracticeBtn').disabled = false;
+                document.getElementById('practiceGesture').disabled = true;
+                
+                this.canvasElement.classList.add('recognizing');
+                this.updatePracticeDisplay();
+                
+                this.statusText.textContent = `🎯 Práctica iniciada: "${this.practiceGesture.name}" - Realiza Frame 1`;
+            }
+
+            stopPractice() {
+                this.isPracticing = false;
+                this.practiceGesture = null;
+                this.practiceFrameIndex = 0;
+                this.practiceBuffer = [];
+                
+                // Actualizar UI
+                document.getElementById('startPracticeBtn').disabled = false;
+                document.getElementById('stopPracticeBtn').disabled = true;
+                document.getElementById('practiceGesture').disabled = false;
+                
+                this.canvasElement.classList.remove('recognizing', 'success-animation');
+                
+                // Limpiar display
+                document.getElementById('targetFrameNumber').textContent = '-';
+                document.getElementById('currentSimilarity').textContent = '0%';
+                document.getElementById('similarityBar').style.width = '0%';
+                document.getElementById('frameProgress').innerHTML = '';
+                
+                this.statusText.textContent = 'Práctica detenida';
+            }
+
+            updateSimilarityThreshold(event) {
+                this.similarityThreshold = parseInt(event.target.value);
+                document.getElementById('thresholdValue').textContent = this.similarityThreshold + '%';
+            }
+
+            processPractice(results) {
+                if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    document.getElementById('currentSimilarity').textContent = '0%';
+                    document.getElementById('similarityBar').style.width = '0%';
+                    return;
+                }
+
+                if (!this.practiceGesture || this.practiceFrameIndex >= this.practiceGesture.frames.length) {
+                    return;
+                }
+
+                // Limitar la frecuencia de verificación para evitar sobrecarga
+                const now = Date.now();
+                if (now - this.lastSimilarityCheck < 100) return; // Verificar cada 100ms
+                this.lastSimilarityCheck = now;
+
+                const currentFrame = {
+                    landmarks: results.multiHandLandmarks,
+                    handedness: results.multiHandedness || []
+                };
+
+                const targetFrame = this.practiceGesture.frames[this.practiceFrameIndex];
+                const similarity = this.calculateFrameSimilarity(currentFrame, targetFrame) * 100;
+
+                this.updateSimilarityDisplay(similarity);
+
+                // Verificar si la similitud es suficiente para avanzar
+                if (similarity >= this.similarityThreshold) {
+                    this.advancePracticeFrame();
+                }
+            }
+
+            advancePracticeFrame() {
+                this.practiceFrameIndex++;
+                
+                // Feedback visual de éxito
+                this.canvasElement.classList.add('success-animation');
+                setTimeout(() => {
+                    this.canvasElement.classList.remove('success-animation');
+                }, 1000);
+
+                if (this.practiceFrameIndex >= this.practiceGesture.frames.length) {
+                    // ¡Práctica completada!
+                    this.completePractice();
+                } else {
+                    // Continuar con el siguiente frame
+                    this.updatePracticeDisplay();
+                    this.statusText.textContent = `✅ Frame ${this.practiceFrameIndex} completado - Realiza Frame ${this.practiceFrameIndex + 1}`;
+                }
+            }
+
+            completePractice() {
+                this.statusText.textContent = `🎉 ¡Excelente! Práctica completada para "${this.practiceGesture.name}"`;
+                
+                // Mostrar animación de éxito prolongada
+                this.canvasElement.classList.add('success-animation');
+                
+                setTimeout(() => {
+                    this.stopPractice();
+                }, 3000);
+            }
+
+            updatePracticeDisplay() {
+                if (!this.practiceGesture) return;
+
+                const targetFrameNum = this.practiceFrameIndex + 1;
+                const totalFrames = this.practiceGesture.frames.length;
+                
+                document.getElementById('targetFrameNumber').textContent = `${targetFrameNum} de ${totalFrames}`;
+                
+                // Crear indicadores de progreso visual
+                const frameProgress = document.getElementById('frameProgress');
+                frameProgress.innerHTML = '';
+                
+                for (let i = 0; i < totalFrames; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'frame-dot';
+                    
+                    if (i < this.practiceFrameIndex) {
+                        dot.classList.add('completed');
+                    } else if (i === this.practiceFrameIndex) {
+                        dot.classList.add('current');
+                    }
+                    
+                    frameProgress.appendChild(dot);
+                }
+            }
+
+            updateSimilarityDisplay(similarity) {
+                document.getElementById('currentSimilarity').textContent = Math.round(similarity) + '%';
+                
+                const similarityBar = document.getElementById('similarityBar');
+                similarityBar.style.width = similarity + '%';
+                
+                // Cambiar color según similitud
+                if (similarity >= this.similarityThreshold) {
+                    similarityBar.style.background = '#28a745';
+                } else if (similarity >= 60) {
+                    similarityBar.style.background = '#ffc107';
+                } else {
+                    similarityBar.style.background = '#dc3545';
+                }
+            }
+
+            updatePracticeGestureList() {
+                const select = document.getElementById('practiceGesture');
+                select.innerHTML = '<option value="">-- Selecciona un gesto --</option>';
+                
+                this.savedGestures.forEach(gesture => {
+                    const option = document.createElement('option');
+                    option.value = gesture.id;
+                    option.textContent = `${gesture.name} (${gesture.frameCount} frames)`;
+                    select.appendChild(option);
+                });
+            }
+
+            captureFrame() {
+                if (!this.lastResults || !this.lastResults.multiHandLandmarks) {
+                    alert('No se detectan manos. Asegúrate de que tu mano esté visible.');
+                    return;
+                }
+
+                if (!this.isRecordingSequence) {
+                    alert('Primero debes iniciar una secuencia.');
+                    return;
+                }
+
+                const gestureName = this.gestureNameInput.value.trim();
+
+                // Capturar frame actual
+                const frame = {
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    landmarks: this.lastResults.multiHandLandmarks,
+                    handedness: this.lastResults.multiHandedness || [],
+                    gestureName: gestureName,
+                    frameIndex: this.currentFrameIndex
+                };
+
+                this.currentFrames.push(frame);
+                this.currentFrameIndex++;
+
+                // Feedback visual
+                this.canvasElement.classList.add('recording');
+                setTimeout(() => {
+                    this.canvasElement.classList.remove('recording');
+                }, 300);
+
+                this.updateSequenceStatus();
+                
+                if (this.currentFrameIndex >= this.maxFramesPerGesture) {
+                    this.statusText.textContent = `Frame ${this.currentFrameIndex} capturado - Secuencia completa, presiona "Finalizar"`;
+                    document.getElementById('captureBtn').disabled = true;
+                } else {
+                    this.statusText.textContent = `Frame ${this.currentFrameIndex} capturado - Listo para Frame ${this.currentFrameIndex + 1}`;
+                }
             }
 
             clearCurrentFrames() {
-                this.currentFrames = [];
+                this.resetSequenceState();
                 this.updateDisplay();
                 this.statusText.textContent = "Frames limpiados";
             }
@@ -624,6 +1089,7 @@
                 this.savedGestures = this.savedGestures.filter(g => g.id !== gestureId);
                 this.saveSavedGestures();
                 this.updateDisplay();
+                this.updatePracticeGestureList();
                 this.statusText.textContent = "Gesto eliminado";
             }
 
@@ -631,8 +1097,10 @@
                 if (confirm('¿Estás seguro de que quieres eliminar todos los gestos?')) {
                     this.savedGestures = [];
                     this.currentFrames = [];
+                    this.resetSequenceState();
                     this.saveSavedGestures();
                     this.updateDisplay();
+                    this.updatePracticeGestureList();
                     this.statusText.textContent = "Todos los gestos eliminados";
                 }
             }
@@ -643,6 +1111,8 @@
                 
                 // Detener cualquier proceso activo
                 this.stopRecognition();
+                this.stopPractice();
+                this.resetSequenceState();
                 
                 // Actualizar botones de modo
                 document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
@@ -657,7 +1127,18 @@
                     document.getElementById('captureInfo').style.display = 'block';
                     document.getElementById('gestureListSection').style.display = 'block';
                     document.getElementById('recognitionResults').classList.remove('active');
-                    this.statusText.textContent = "Modo captura activado";
+                    this.statusText.textContent = "Modo registro activado - Captura gestos secuenciales";
+                } else if (mode === 'practice') {
+                    document.getElementById('captureInfo').style.display = 'none';
+                    document.getElementById('gestureListSection').style.display = 'none';
+                    document.getElementById('recognitionResults').classList.remove('active');
+                    this.updatePracticeGestureList();
+                    
+                    if (this.savedGestures.length === 0) {
+                        this.statusText.textContent = "No hay gestos guardados para practicar";
+                    } else {
+                        this.statusText.textContent = "Modo práctica activado - Selecciona un gesto para practicar";
+                    }
                 } else if (mode === 'recognize') {
                     document.getElementById('captureInfo').style.display = 'none';
                     document.getElementById('gestureListSection').style.display = 'none';
@@ -829,8 +1310,11 @@
                 // Actualizar contador de frames
                 this.frameCountSpan.textContent = this.currentFrames.length;
                 
-                // Habilitar/deshabilitar botón de guardar
-                document.getElementById('saveGestureBtn').disabled = this.currentFrames.length === 0;
+                // Habilitar/deshabilitar botón de finalizar secuencia
+                if (document.getElementById('finishSequenceBtn')) {
+                    document.getElementById('finishSequenceBtn').disabled = 
+                        this.currentFrames.length === 0 || !this.isRecordingSequence;
+                }
 
                 // Actualizar lista de frames actuales
                 const currentFramesDiv = document.getElementById('currentFrames');
@@ -854,7 +1338,10 @@
                         `<div class="gesture-item">
                             <div>
                                 <span class="gesture-name">${gesture.name}</span>
-                                <div class="frame-info">${gesture.frameCount} frames - ${new Date(gesture.createdAt).toLocaleDateString()}</div>
+                                <div class="frame-info">
+                                    ${gesture.frameCount} frames${gesture.isSequential ? ' (secuencial)' : ''} - 
+                                    ${new Date(gesture.createdAt).toLocaleDateString()}
+                                </div>
                             </div>
                             <button class="delete-btn" onclick="gestureSystem.deleteGesture(${gesture.id})">Eliminar</button>
                         </div>`
