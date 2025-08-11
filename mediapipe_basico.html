@@ -479,13 +479,13 @@
 </head>
 <body>
         <div class="container">
-        <h1>🤟 Captura de Gestos con MediaPipe</h1>
+        <h1>Captura de Gestos con MediaPipe</h1>
         
         <!-- Selector de Modo -->
         <div class="mode-selector">
-            <button id="captureMode" class="mode-btn active">📚 Modo Registro</button>
-            <button id="practiceMode" class="mode-btn">🎯 Modo Práctica</button>
-            <button id="recognizeMode" class="mode-btn">🔍 Modo Reconocimiento</button>
+            <button id="captureMode" class="mode-btn active">Modo Registro</button>
+            <button id="practiceMode" class="mode-btn">Modo Práctica</button>
+            <button id="recognizeMode" class="mode-btn">Modo Reconocimiento</button>
         </div>
         
         <!-- Modo Captura -->
@@ -495,10 +495,10 @@
                     <label for="gestureName">Nombre del Gesto:</label>
                     <input type="text" id="gestureName" placeholder="Ej: ¿Dónde vives?, Hola, Gracias">
                 </div>
-                <button id="startSequenceBtn" class="btn btn-primary">🎬 Iniciar Secuencia</button>
-                <button id="captureBtn" class="btn btn-success" disabled>📸 Capturar Frame <span id="frameNumber">1</span></button>
-                <button id="finishSequenceBtn" class="btn btn-success" disabled>✅ Finalizar Secuencia</button>
-                <button id="clearFramesBtn" class="btn btn-danger">🗑️ Limpiar Frames</button>
+                <button id="startSequenceBtn" class="btn btn-primary">Iniciar Secuencia</button>
+                <button id="captureBtn" class="btn btn-success" disabled>Capturar Frame <span id="frameNumber">1</span></button>
+                <button id="finishSequenceBtn" class="btn btn-success" disabled>Finalizar Secuencia</button>
+                <button id="clearFramesBtn" class="btn btn-danger">Limpiar Frames</button>
             </div>
             <div class="sequence-status" id="sequenceStatus">
                 <p><strong>Estado:</strong> <span id="sequenceStatusText">Presiona "Iniciar Secuencia" para comenzar</span></p>
@@ -518,8 +518,8 @@
                         <option value="">-- Selecciona un gesto --</option>
                     </select>
                 </div>
-                <button id="startPracticeBtn" class="btn btn-primary">🎯 Iniciar Práctica</button>
-                <button id="stopPracticeBtn" class="btn btn-danger" disabled>⏹️ Detener Práctica</button>
+                <button id="startPracticeBtn" class="btn btn-primary">Iniciar Práctica</button>
+                <button id="stopPracticeBtn" class="btn btn-danger" disabled>Detener Práctica</button>
                 <div class="input-group">
                     <label for="similarityThreshold">Umbral de Similitud:</label>
                     <input type="range" id="similarityThreshold" min="70" max="95" step="5" value="80">
@@ -543,8 +543,8 @@
         <!-- Modo Reconocimiento -->
         <div id="recognizeModeContent" class="mode-content">
             <div class="controls">
-                <button id="startRecognitionBtn" class="btn btn-primary">🎯 Iniciar Reconocimiento</button>
-                <button id="stopRecognitionBtn" class="btn btn-danger" disabled>⏹️ Detener</button>
+                <button id="startRecognitionBtn" class="btn btn-primary">Iniciar Reconocimiento</button>
+                <button id="stopRecognitionBtn" class="btn btn-danger" disabled>Detener</button>
                 <div class="input-group">
                     <label for="toleranceSlider">Tolerancia:</label>
                     <input type="range" id="toleranceSlider" min="0.1" max="0.9" step="0.1" value="0.7">
@@ -563,7 +563,7 @@
 
         <!-- Resultados de Reconocimiento -->
         <div id="recognitionResults" class="recognition-results">
-            <h3>🎯 Resultado del Reconocimiento</h3>
+            <h3>Resultado del Reconocimiento</h3>
             <div class="result-display">
                 <div class="recognized-gesture">
                     <span id="recognizedGesture">---</span>
@@ -588,10 +588,10 @@
         </div>
 
         <div class="export-section">
-            <button id="exportBtn" class="btn btn-primary">📤 Exportar Dataset</button>
-            <button id="importBtn" class="btn btn-success">📥 Importar Dataset</button>
+            <button id="exportBtn" class="btn btn-primary">Exportar Dataset</button>
+            <button id="importBtn" class="btn btn-success">Importar Dataset</button>
             <input type="file" id="importFile" accept=".json" title="Seleccionar archivo JSON para importar">
-            <button id="clearAllBtn" class="btn btn-danger">🗑️ Limpiar Todo</button>
+            <button id="clearAllBtn" class="btn btn-danger">Limpiar Todo</button>
         </div>
     </div>
 
@@ -891,7 +891,7 @@
                 this.canvasElement.classList.add('recognizing');
                 this.updatePracticeDisplay();
                 
-                this.statusText.textContent = `🎯 Práctica iniciada: "${this.practiceGesture.name}" - Realiza Frame 1`;
+                this.statusText.textContent = `Práctica iniciada: "${this.practiceGesture.name}" - Realiza Frame 1`;
             }
 
             stopPractice() {
@@ -968,12 +968,12 @@
                 } else {
                     // Continuar con el siguiente frame
                     this.updatePracticeDisplay();
-                    this.statusText.textContent = `✅ Frame ${this.practiceFrameIndex} completado - Realiza Frame ${this.practiceFrameIndex + 1}`;
+                    this.statusText.textContent = `Frame ${this.practiceFrameIndex} completado - Realiza Frame ${this.practiceFrameIndex + 1}`;
                 }
             }
 
             completePractice() {
-                this.statusText.textContent = `🎉 ¡Excelente! Práctica completada para "${this.practiceGesture.name}"`;
+                this.statusText.textContent = `¡Excelente! Práctica completada para "${this.practiceGesture.name}"`;
                 
                 // Mostrar animación de éxito prolongada
                 this.canvasElement.classList.add('success-animation');
@@ -1165,7 +1165,7 @@
                 this.canvasElement.classList.add('recognizing');
                 document.getElementById('startRecognitionBtn').disabled = true;
                 document.getElementById('stopRecognitionBtn').disabled = false;
-                this.statusText.textContent = "🎯 Reconociendo gestos... Realiza un gesto";
+                this.statusText.textContent = "Reconociendo gestos... Realiza un gesto";
                 
                 // Limpiar resultados anteriores
                 this.updateRecognitionDisplay('---', 0);
