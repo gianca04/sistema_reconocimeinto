@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaPipe Hands - Captura de Gestos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .video-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        video, canvas {
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            max-width: 640px;
+            max-height: 480px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .status p {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .frame-count {
+            color: #007bff;
+        }
+
+        .gesture-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .gesture-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .gesture-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .gesture-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .frame-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .recording {
+            border-color: #dc3545 !important;
+            animation: recording-pulse 1s infinite;
+        }
+
+        @keyframes recording-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(220, 53, 69, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(220, 53, 69, 0.8); }
+        }
+
+        .export-section {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        /* Estilos para modos */
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .mode-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .mode-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .mode-btn.active:hover {
+            background: #5a6fd8;
+        }
+
+        .mode-content {
+            display: none;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        /* Estilos para reconocimiento */
+        .recognition-results {
+            background: #f8f9fa;
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .recognition-results.active {
+            display: block;
+        }
+
+        .result-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .recognized-gesture {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #28a745;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            min-width: 200px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .confidence-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .confidence-bar-container {
+            flex: 1;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .confidence-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #dc3545, #ffc107, #28a745);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        #confidenceText {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #333;
+            min-width: 50px;
+        }
+
+        /* Slider de tolerancia */
+        input[type="range"] {
+            width: 150px;
+            margin: 0 10px;
+        }
+
+        #toleranceValue {
+            font-weight: bold;
+            color: #667eea;
+            min-width: 40px;
+        }
+
+        /* Estados de reconocimiento */
+        .recognizing {
+            border-color: #ffc107 !important;
+            animation: recognizing-pulse 1.5s infinite;
+        }
+
+        @keyframes recognizing-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 193, 7, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 193, 7, 0.8); }
+        }
+
+        /* Ocultar input file */
+        #importFile {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .mode-selector {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .confidence-display {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .recognized-gesture {
+                font-size: 2rem;
+                min-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+        <div class="container">
+        <h1>🤟 Captura de Gestos con MediaPipe</h1>
+        
+        <!-- Selector de Modo -->
+        <div class="mode-selector">
+            <button id="captureMode" class="mode-btn active">📚 Modo Captura</button>
+            <button id="recognizeMode" class="mode-btn">🔍 Modo Reconocimiento</button>
+        </div>
+        
+        <!-- Modo Captura -->
+        <div id="captureModeContent" class="mode-content active">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="gestureName">Nombre del Gesto:</label>
+                    <input type="text" id="gestureName" placeholder="Ej: Hola, Gracias, Amor">
+                </div>
+                <button id="captureBtn" class="btn btn-primary">📸 Capturar Frame</button>
+                <button id="saveGestureBtn" class="btn btn-success" disabled>💾 Guardar Gesto</button>
+                <button id="clearFramesBtn" class="btn btn-danger">🗑️ Limpiar Frames</button>
+            </div>
+        </div>
+        
+        <!-- Modo Reconocimiento -->
+        <div id="recognizeModeContent" class="mode-content">
+            <div class="controls">
+                <button id="startRecognitionBtn" class="btn btn-primary">🎯 Iniciar Reconocimiento</button>
+                <button id="stopRecognitionBtn" class="btn btn-danger" disabled>⏹️ Detener</button>
+                <div class="input-group">
+                    <label for="toleranceSlider">Tolerancia:</label>
+                    <input type="range" id="toleranceSlider" min="0.1" max="0.9" step="0.1" value="0.7">
+                    <span id="toleranceValue">70%</span>
+                </div>
+            </div>
+        </div>        <div class="video-container">
+            <video id="video" autoplay muted></video>
+            <canvas id="outputCanvas"></canvas>
+        </div>
+
+        <div class="status">
+            <p>Estado: <span id="statusText">Listo para capturar</span></p>
+            <p class="frame-count">Frames capturados: <span id="frameCount">0</span></p>
+        </div>
+
+        <!-- Resultados de Reconocimiento -->
+        <div id="recognitionResults" class="recognition-results">
+            <h3>🎯 Resultado del Reconocimiento</h3>
+            <div class="result-display">
+                <div class="recognized-gesture">
+                    <span id="recognizedGesture">---</span>
+                </div>
+                <div class="confidence-display">
+                    <div class="confidence-bar-container">
+                        <div class="confidence-bar" id="confidenceBar"></div>
+                    </div>
+                    <span id="confidenceText">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gesture-info" id="captureInfo">
+            <h3>Frames del Gesto Actual</h3>
+            <div id="currentFrames">No hay frames capturados</div>
+        </div>
+
+        <div class="gesture-list" id="gestureListSection">
+            <h3>Gestos Guardados</h3>
+            <div id="savedGestures">No hay gestos guardados</div>
+        </div>
+
+        <div class="export-section">
+            <button id="exportBtn" class="btn btn-primary">📤 Exportar Dataset</button>
+            <button id="importBtn" class="btn btn-success">📥 Importar Dataset</button>
+            <input type="file" id="importFile" accept=".json" title="Seleccionar archivo JSON para importar">
+            <button id="clearAllBtn" class="btn btn-danger">🗑️ Limpiar Todo</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script>
+        class GestureCaptureSystem {
+            constructor() {
+                this.currentFrames = [];
+                this.savedGestures = this.loadSavedGestures();
+                this.isCapturing = false;
+                this.isRecognizing = false;
+                this.hands = null;
+                this.camera = null;
+                this.lastResults = null;
+                this.currentMode = 'capture';
+                this.recognitionTolerance = 0.7;
+                this.recognitionBuffer = [];
+                this.maxBufferSize = 10;
+                
+                this.initializeElements();
+                this.initializeMediaPipe();
+                this.initializeEventListeners();
+                this.updateDisplay();
+                this.switchMode('capture');
+            }
+
+            initializeElements() {
+                this.videoElement = document.getElementById('video');
+                this.canvasElement = document.getElementById('outputCanvas');
+                this.canvasCtx = this.canvasElement.getContext('2d');
+                this.gestureNameInput = document.getElementById('gestureName');
+                this.statusText = document.getElementById('statusText');
+                this.frameCountSpan = document.getElementById('frameCount');
+            }
+
+            async initializeMediaPipe() {
+                this.hands = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                this.hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.5
+                });
+
+                this.hands.onResults((results) => this.onResults(results));
+
+                // Inicializar cámara
+                this.camera = new Camera(this.videoElement, {
+                    onFrame: async () => {
+                        await this.hands.send({ image: this.videoElement });
+                    },
+                    width: 640,
+                    height: 480
+                });
+
+                // Configurar canvas
+                this.canvasElement.width = 640;
+                this.canvasElement.height = 480;
+
+                this.camera.start();
+                this.statusText.textContent = "Cámara iniciada - Listo para capturar";
+            }
+
+            onResults(results) {
+                this.lastResults = results;
+                
+                // Limpiar canvas
+                this.canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+                
+                // Dibujar imagen de video
+                this.canvasCtx.drawImage(results.image, 0, 0, this.canvasElement.width, this.canvasElement.height);
+
+                // Dibujar landmarks si se detectan manos
+                if (results.multiHandLandmarks) {
+                    for (const landmarks of results.multiHandLandmarks) {
+                        drawConnectors(this.canvasCtx, landmarks, HAND_CONNECTIONS, 
+                            { color: '#00FF00', lineWidth: 2 });
+                        drawLandmarks(this.canvasCtx, landmarks, 
+                            { color: '#FF0000', lineWidth: 1, radius: 3 });
+                    }
+
+                    // Procesar reconocimiento si está activo
+                    if (this.isRecognizing) {
+                        this.processRecognition(results);
+                    }
+                }
+            }
+
+            initializeEventListeners() {
+                // Eventos de modo
+                document.getElementById('captureMode').addEventListener('click', () => this.switchMode('capture'));
+                document.getElementById('recognizeMode').addEventListener('click', () => this.switchMode('recognize'));
+
+                // Eventos de captura
+                document.getElementById('captureBtn').addEventListener('click', () => this.captureFrame());
+                document.getElementById('saveGestureBtn').addEventListener('click', () => this.saveGesture());
+                document.getElementById('clearFramesBtn').addEventListener('click', () => this.clearCurrentFrames());
+                
+                // Eventos de reconocimiento
+                document.getElementById('startRecognitionBtn').addEventListener('click', () => this.startRecognition());
+                document.getElementById('stopRecognitionBtn').addEventListener('click', () => this.stopRecognition());
+                document.getElementById('toleranceSlider').addEventListener('input', (e) => this.updateTolerance(e));
+
+                // Eventos de exportación
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportDataset());
+                document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+                document.getElementById('importFile').addEventListener('change', (e) => this.importDataset(e));
+                document.getElementById('clearAllBtn').addEventListener('click', () => this.clearAllGestures());
+            }
+
+            captureFrame() {
+                if (!this.lastResults || !this.lastResults.multiHandLandmarks) {
+                    alert('No se detectan manos. Asegúrate de que tu mano esté visible.');
+                    return;
+                }
+
+                const gestureName = this.gestureNameInput.value.trim();
+                if (!gestureName) {
+                    alert('Por favor ingresa un nombre para el gesto.');
+                    return;
+                }
+
+                // Capturar frame actual
+                const frame = {
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    landmarks: this.lastResults.multiHandLandmarks,
+                    handedness: this.lastResults.multiHandedness || [],
+                    gestureName: gestureName
+                };
+
+                this.currentFrames.push(frame);
+                this.updateDisplay();
+
+                // Feedback visual
+                this.canvasElement.classList.add('recording');
+                setTimeout(() => {
+                    this.canvasElement.classList.remove('recording');
+                }, 200);
+
+                this.statusText.textContent = `Frame capturado para "${gestureName}"`;
+            }
+
+            saveGesture() {
+                const gestureName = this.gestureNameInput.value.trim();
+                
+                if (!gestureName) {
+                    alert('Por favor ingresa un nombre para el gesto.');
+                    return;
+                }
+
+                if (this.currentFrames.length === 0) {
+                    alert('No hay frames para guardar.');
+                    return;
+                }
+
+                // Crear objeto del gesto
+                const gesture = {
+                    id: Date.now(),
+                    name: gestureName,
+                    frames: [...this.currentFrames],
+                    frameCount: this.currentFrames.length,
+                    createdAt: new Date().toISOString()
+                };
+
+                // Guardar en array de gestos
+                this.savedGestures.push(gesture);
+                this.saveSavedGestures();
+
+                // Limpiar frames actuales
+                this.currentFrames = [];
+                this.gestureNameInput.value = '';
+                
+                this.updateDisplay();
+                this.statusText.textContent = `Gesto "${gestureName}" guardado con ${gesture.frameCount} frames`;
+            }
+
+            clearCurrentFrames() {
+                this.currentFrames = [];
+                this.updateDisplay();
+                this.statusText.textContent = "Frames limpiados";
+            }
+
+            deleteGesture(gestureId) {
+                this.savedGestures = this.savedGestures.filter(g => g.id !== gestureId);
+                this.saveSavedGestures();
+                this.updateDisplay();
+                this.statusText.textContent = "Gesto eliminado";
+            }
+
+            clearAllGestures() {
+                if (confirm('¿Estás seguro de que quieres eliminar todos los gestos?')) {
+                    this.savedGestures = [];
+                    this.currentFrames = [];
+                    this.saveSavedGestures();
+                    this.updateDisplay();
+                    this.statusText.textContent = "Todos los gestos eliminados";
+                }
+            }
+
+            // === FUNCIONES DE MODO ===
+            switchMode(mode) {
+                this.currentMode = mode;
+                
+                // Detener cualquier proceso activo
+                this.stopRecognition();
+                
+                // Actualizar botones de modo
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.mode-content').forEach(content => content.classList.remove('active'));
+                
+                // Activar modo seleccionado
+                document.getElementById(mode + 'Mode').classList.add('active');
+                document.getElementById(mode + 'ModeContent').classList.add('active');
+                
+                // Mostrar/ocultar elementos según el modo
+                if (mode === 'capture') {
+                    document.getElementById('captureInfo').style.display = 'block';
+                    document.getElementById('gestureListSection').style.display = 'block';
+                    document.getElementById('recognitionResults').classList.remove('active');
+                    this.statusText.textContent = "Modo captura activado";
+                } else if (mode === 'recognize') {
+                    document.getElementById('captureInfo').style.display = 'none';
+                    document.getElementById('gestureListSection').style.display = 'none';
+                    document.getElementById('recognitionResults').classList.add('active');
+                    this.statusText.textContent = "Modo reconocimiento activado";
+                    
+                    if (this.savedGestures.length === 0) {
+                        this.statusText.textContent = "No hay gestos guardados para reconocer";
+                    }
+                }
+            }
+
+            // === FUNCIONES DE RECONOCIMIENTO ===
+            startRecognition() {
+                if (this.savedGestures.length === 0) {
+                    alert('No hay gestos guardados para reconocer. Cambia al modo captura y graba algunos gestos primero.');
+                    return;
+                }
+
+                this.isRecognizing = true;
+                this.recognitionBuffer = [];
+                
+                // Actualizar UI
+                this.canvasElement.classList.add('recognizing');
+                document.getElementById('startRecognitionBtn').disabled = true;
+                document.getElementById('stopRecognitionBtn').disabled = false;
+                this.statusText.textContent = "🎯 Reconociendo gestos... Realiza un gesto";
+                
+                // Limpiar resultados anteriores
+                this.updateRecognitionDisplay('---', 0);
+            }
+
+            stopRecognition() {
+                this.isRecognizing = false;
+                this.recognitionBuffer = [];
+                
+                // Actualizar UI
+                this.canvasElement.classList.remove('recognizing');
+                document.getElementById('startRecognitionBtn').disabled = false;
+                document.getElementById('stopRecognitionBtn').disabled = true;
+                this.statusText.textContent = "Reconocimiento detenido";
+                
+                // Limpiar resultados
+                this.updateRecognitionDisplay('---', 0);
+            }
+
+            updateTolerance(event) {
+                this.recognitionTolerance = parseFloat(event.target.value);
+                document.getElementById('toleranceValue').textContent = Math.round(this.recognitionTolerance * 100) + '%';
+            }
+
+            processRecognition(results) {
+                if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    return;
+                }
+
+                // Crear frame actual para comparación
+                const currentFrame = {
+                    landmarks: results.multiHandLandmarks,
+                    handedness: results.multiHandedness || [],
+                    timestamp: Date.now()
+                };
+
+                // Agregar al buffer de reconocimiento
+                this.recognitionBuffer.push(currentFrame);
+                if (this.recognitionBuffer.length > this.maxBufferSize) {
+                    this.recognitionBuffer.shift();
+                }
+
+                // Procesar reconocimiento solo si tenemos suficientes frames
+                if (this.recognitionBuffer.length >= 3) {
+                    this.performGestureRecognition(currentFrame);
+                }
+            }
+
+            performGestureRecognition(currentFrame) {
+                let bestMatch = null;
+                let bestScore = 0;
+
+                // Comparar con todos los gestos guardados
+                for (const gesture of this.savedGestures) {
+                    const score = this.compareWithGesture(currentFrame, gesture);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = gesture;
+                    }
+                }
+
+                // Aplicar tolerancia
+                if (bestMatch && bestScore >= this.recognitionTolerance) {
+                    this.updateRecognitionDisplay(bestMatch.name, bestScore * 100);
+                } else {
+                    this.updateRecognitionDisplay('No reconocido', bestScore * 100);
+                }
+            }
+
+            compareWithGesture(currentFrame, gesture) {
+                let maxSimilarity = 0;
+
+                // Comparar con cada frame del gesto guardado
+                for (const storedFrame of gesture.frames) {
+                    const similarity = this.calculateFrameSimilarity(currentFrame, storedFrame);
+                    maxSimilarity = Math.max(maxSimilarity, similarity);
+                }
+
+                return maxSimilarity;
+            }
+
+            calculateFrameSimilarity(frame1, frame2) {
+                if (!frame1.landmarks || !frame2.landmarks || 
+                    frame1.landmarks.length === 0 || frame2.landmarks.length === 0) {
+                    return 0;
+                }
+
+                const landmarks1 = frame1.landmarks[0]; // Primera mano
+                const landmarks2 = frame2.landmarks[0]; // Primera mano
+
+                if (!landmarks1 || !landmarks2 || landmarks1.length !== landmarks2.length) {
+                    return 0;
+                }
+
+                // Calcular distancia euclidiana normalizada
+                let totalDistance = 0;
+                let validPoints = 0;
+
+                for (let i = 0; i < landmarks1.length; i++) {
+                    const p1 = landmarks1[i];
+                    const p2 = landmarks2[i];
+
+                    if (p1 && p2) {
+                        const distance = Math.sqrt(
+                            Math.pow(p1.x - p2.x, 2) + 
+                            Math.pow(p1.y - p2.y, 2) + 
+                            Math.pow((p1.z || 0) - (p2.z || 0), 2)
+                        );
+                        totalDistance += distance;
+                        validPoints++;
+                    }
+                }
+
+                if (validPoints === 0) return 0;
+
+                // Convertir distancia a similitud (0-1)
+                const avgDistance = totalDistance / validPoints;
+                const similarity = Math.max(0, 1 - (avgDistance * 3)); // Factor de escala ajustable
+
+                return similarity;
+            }
+
+            updateRecognitionDisplay(gestureName, confidence) {
+                document.getElementById('recognizedGesture').textContent = gestureName;
+                document.getElementById('confidenceText').textContent = Math.round(confidence) + '%';
+                
+                // Actualizar barra de confianza
+                const confidenceBar = document.getElementById('confidenceBar');
+                confidenceBar.style.width = confidence + '%';
+                
+                // Cambiar color según confianza
+                if (confidence >= 70) {
+                    confidenceBar.style.background = '#28a745';
+                } else if (confidence >= 50) {
+                    confidenceBar.style.background = '#ffc107';
+                } else {
+                    confidenceBar.style.background = '#dc3545';
+                }
+            }
+
+            updateDisplay() {
+                // Actualizar contador de frames
+                this.frameCountSpan.textContent = this.currentFrames.length;
+                
+                // Habilitar/deshabilitar botón de guardar
+                document.getElementById('saveGestureBtn').disabled = this.currentFrames.length === 0;
+
+                // Actualizar lista de frames actuales
+                const currentFramesDiv = document.getElementById('currentFrames');
+                if (this.currentFrames.length === 0) {
+                    currentFramesDiv.innerHTML = 'No hay frames capturados';
+                } else {
+                    currentFramesDiv.innerHTML = this.currentFrames.map((frame, index) => 
+                        `<div class="gesture-item">
+                            <span>Frame ${index + 1}</span>
+                            <span class="frame-info">${new Date(frame.timestamp).toLocaleTimeString()}</span>
+                        </div>`
+                    ).join('');
+                }
+
+                // Actualizar lista de gestos guardados
+                const savedGesturesDiv = document.getElementById('savedGestures');
+                if (this.savedGestures.length === 0) {
+                    savedGesturesDiv.innerHTML = 'No hay gestos guardados';
+                } else {
+                    savedGesturesDiv.innerHTML = this.savedGestures.map(gesture => 
+                        `<div class="gesture-item">
+                            <div>
+                                <span class="gesture-name">${gesture.name}</span>
+                                <div class="frame-info">${gesture.frameCount} frames - ${new Date(gesture.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <button class="delete-btn" onclick="gestureSystem.deleteGesture(${gesture.id})">Eliminar</button>
+                        </div>`
+                    ).join('');
+                }
+            }
+
+            exportDataset() {
+                if (this.savedGestures.length === 0) {
+                    alert('No hay gestos para exportar.');
+                    return;
+                }
+
+                const dataset = {
+                    version: "1.0",
+                    createdAt: new Date().toISOString(),
+                    totalGestures: this.savedGestures.length,
+                    totalFrames: this.savedGestures.reduce((sum, g) => sum + g.frameCount, 0),
+                    gestures: this.savedGestures
+                };
+
+                const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `gestos_dataset_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                this.statusText.textContent = "Dataset exportado";
+            }
+
+            importDataset(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // Validar estructura del dataset
+                        if (data.gestures && Array.isArray(data.gestures)) {
+                            // Preguntar si quiere reemplazar o agregar
+                            const replace = confirm('¿Quieres reemplazar los gestos actuales? (Cancelar para agregar al dataset existente)');
+                            
+                            if (replace) {
+                                this.savedGestures = data.gestures;
+                            } else {
+                                // Agregar gestos nuevos, evitando duplicados por nombre
+                                data.gestures.forEach(newGesture => {
+                                    const existingIndex = this.savedGestures.findIndex(g => g.name === newGesture.name);
+                                    if (existingIndex !== -1) {
+                                        // Reemplazar gesto existente
+                                        this.savedGestures[existingIndex] = newGesture;
+                                    } else {
+                                        // Agregar nuevo gesto
+                                        this.savedGestures.push(newGesture);
+                                    }
+                                });
+                            }
+                            
+                            this.saveSavedGestures();
+                            this.updateDisplay();
+                            this.statusText.textContent = `Dataset importado: ${data.gestures.length} gestos cargados`;
+                        } else {
+                            alert('Formato de archivo inválido. El archivo debe contener un dataset de gestos válido.');
+                        }
+                    } catch (error) {
+                        alert('Error al leer el archivo. Asegúrate de que sea un archivo JSON válido.');
+                        console.error('Error importing dataset:', error);
+                    }
+                };
+                reader.readAsText(file);
+                
+                // Limpiar input para permitir importar el mismo archivo nuevamente
+                event.target.value = '';
+            }
+
+            loadSavedGestures() {
+                const saved = localStorage.getItem('savedGestures');
+                return saved ? JSON.parse(saved) : [];
+            }
+
+            saveSavedGestures() {
+                localStorage.setItem('savedGestures', JSON.stringify(this.savedGestures));
+            }
+        }
+
+        // Inicializar sistema
+        let gestureSystem;
+        document.addEventListener('DOMContentLoaded', () => {
+            gestureSystem = new GestureCaptureSystem();
+        });
+    </script>
+</body>
+</html>
