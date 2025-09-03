@@ -11,6 +11,17 @@
 <body>
     <div class="container">
         <h1>Captura de Gestos con MediaPipe</h1>
+        
+        <!-- Mensaje informativo sobre normalización -->
+        <div class="info-banner">
+            <div class="info-content">
+                <span class="info-icon">🎯</span>
+                <div class="info-text">
+                    <strong>Sistema Mejorado:</strong> Ahora usa normalización de landmarks para reconocimiento independiente del tamaño y posición de la mano.
+                </div>
+                <button id="showNormalizationBannerBtn" class="info-btn">Ver Detalles</button>
+            </div>
+        </div>
 
         <!-- Selector de Modo -->
         <div class="mode-selector">
@@ -126,6 +137,40 @@
             <button id="importBtn" class="btn btn-success">Importar Dataset</button>
             <input type="file" id="importFile" accept=".json" title="Seleccionar archivo JSON para importar">
             <button id="clearAllBtn" class="btn btn-danger">Limpiar Todo</button>
+            <button id="showNormalizationBtn" class="btn" style="background: #6f42c1; color: white;">Ver Normalización</button>
+        </div>
+
+        <!-- Modal de información de normalización -->
+        <div id="normalizationModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>🔬 Normalización de Landmarks</h2>
+                <div class="normalization-info">
+                    <h3>¿Por qué normalizar?</h3>
+                    <p>La normalización hace que el reconocimiento de gestos sea <strong>independiente del tamaño y posición de la mano</strong>.</p>
+                    
+                    <h3>Proceso de normalización:</h3>
+                    <ol>
+                        <li><strong>Calcular el centroide:</strong> Promedio de las coordenadas x e y de los 21 puntos de la mano</li>
+                        <li><strong>Trasladar al centro:</strong> Restar el centroide a cada punto (elimina dependencia de posición)</li>
+                        <li><strong>Escalar:</strong> Dividir por la distancia máxima al centro (elimina dependencia de tamaño)</li>
+                    </ol>
+                    
+                    <h3>Beneficios:</h3>
+                    <ul>
+                        <li>✅ Funciona con manos de cualquier tamaño</li>
+                        <li>✅ Funciona en cualquier posición de la cámara</li>
+                        <li>✅ Mayor precisión en el reconocimiento</li>
+                        <li>✅ Gestos más consistentes</li>
+                    </ul>
+                    
+                    <div class="normalization-demo">
+                        <h3>Ejemplo visual:</h3>
+                        <p><strong>Sin normalización:</strong> Una mano pequeña en la esquina vs una mano grande en el centro = diferentes</p>
+                        <p><strong>Con normalización:</strong> Ambas manos se ven iguales al sistema ✨</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

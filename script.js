@@ -119,6 +119,63 @@ class GestureCaptureSystem {
     }
   }
 
+  // === FUNCIONES DE NORMALIZACIÓN DE LANDMARKS ===
+  
+  calcularCentroide(landmarks) {
+    let cx = 0, cy = 0;
+    for (const lm of landmarks) {
+      cx += lm.x;
+      cy += lm.y;
+    }
+    return { x: cx / landmarks.length, y: cy / landmarks.length };
+  }
+
+  normalizarLandmarks(landmarks) {
+    // Paso 1: Calcular centroide
+    const centroide = this.calcularCentroide(landmarks);
+    
+    // Paso 2: Trasladar landmarks al centro (restar centroide)
+    const landmarksTransladados = landmarks.map(lm => ({
+      x: lm.x - centroide.x,
+      y: lm.y - centroide.y,
+      z: lm.z || 0 // Mantener z si existe
+    }));
+    
+    // Paso 3: Calcular la distancia máxima desde el centro
+    let maxDist = 0;
+    for (const lm of landmarksTransladados) {
+      const dist = Math.sqrt(lm.x * lm.x + lm.y * lm.y);
+      if (dist > maxDist) maxDist = dist;
+    }
+    
+    // Evitar división por cero
+    if (maxDist === 0) return landmarksTransladados;
+    
+    // Paso 4: Escalar landmarks para normalizar el tamaño
+    const landmarksNormalizados = landmarksTransladados.map(lm => ({
+      x: lm.x / maxDist,
+      y: lm.y / maxDist,
+      z: lm.z || 0
+    }));
+    
+    return landmarksNormalizados;
+  }
+
+  processarFrameParaCaptura(results) {
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+      return null;
+    }
+
+    const landmarks = results.multiHandLandmarks[0]; // Primera mano detectada
+    const landmarksNormalizados = this.normalizarLandmarks(landmarks);
+    
+    return {
+      landmarks: results.multiHandLandmarks, // Mantener originales para visualización
+      landmarksNormalizados: landmarksNormalizados, // Landmarks procesados para comparación
+      handedness: results.multiHandedness || []
+    };
+  }
+
   initializeEventListeners() {
     // Eventos de modo
     document
@@ -182,6 +239,27 @@ class GestureCaptureSystem {
     document
       .getElementById("clearAllBtn")
       .addEventListener("click", () => this.clearAllGestures());
+    
+    // Eventos del modal de normalización
+    document
+      .getElementById("showNormalizationBtn")
+      .addEventListener("click", () => this.showNormalizationModal());
+    document
+      .getElementById("showNormalizationBannerBtn")
+      .addEventListener("click", () => this.showNormalizationModal());
+    
+    // Cerrar modal
+    document
+      .querySelector(".close")
+      .addEventListener("click", () => this.hideNormalizationModal());
+    
+    // Cerrar modal al hacer clic fuera
+    window.addEventListener("click", (event) => {
+      const modal = document.getElementById("normalizationModal");
+      if (event.target === modal) {
+        this.hideNormalizationModal();
+      }
+    });
   }
 
   // === FUNCIONES DE REGISTRO SECUENCIAL ===
@@ -223,12 +301,20 @@ class GestureCaptureSystem {
 
     const gestureName = this.gestureNameInput.value.trim();
 
-    // Capturar frame actual
+    // Procesar frame con normalización
+    const frameData = this.processarFrameParaCaptura(this.lastResults);
+    if (!frameData) {
+      alert("Error al procesar el frame. Inténtalo de nuevo.");
+      return;
+    }
+
+    // Capturar frame actual con landmarks normalizados
     const frame = {
       id: Date.now(),
       timestamp: new Date().toISOString(),
-      landmarks: this.lastResults.multiHandLandmarks,
-      handedness: this.lastResults.multiHandedness || [],
+      landmarks: frameData.landmarks, // Originales para visualización
+      landmarksNormalizados: frameData.landmarksNormalizados, // Para comparación
+      handedness: frameData.handedness,
       gestureName: gestureName,
       frameIndex: this.currentFrameIndex,
     };
@@ -405,9 +491,14 @@ class GestureCaptureSystem {
     if (now - this.lastSimilarityCheck < 100) return; // Verificar cada 100ms
     this.lastSimilarityCheck = now;
 
+    // Procesar frame actual con normalización
+    const frameData = this.processarFrameParaCaptura(results);
+    if (!frameData) return;
+
     const currentFrame = {
-      landmarks: results.multiHandLandmarks,
-      handedness: results.multiHandedness || [],
+      landmarks: frameData.landmarks,
+      landmarksNormalizados: frameData.landmarksNormalizados,
+      handedness: frameData.handedness,
     };
 
     const targetFrame = this.practiceGesture.frames[this.practiceFrameIndex];
@@ -509,50 +600,6 @@ class GestureCaptureSystem {
       option.textContent = `${gesture.name} (${gesture.frameCount} frames)`;
       select.appendChild(option);
     });
-  }
-
-  captureFrame() {
-    if (!this.lastResults || !this.lastResults.multiHandLandmarks) {
-      alert("No se detectan manos. Asegúrate de que tu mano esté visible.");
-      return;
-    }
-
-    if (!this.isRecordingSequence) {
-      alert("Primero debes iniciar una secuencia.");
-      return;
-    }
-
-    const gestureName = this.gestureNameInput.value.trim();
-
-    // Capturar frame actual
-    const frame = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      landmarks: this.lastResults.multiHandLandmarks,
-      handedness: this.lastResults.multiHandedness || [],
-      gestureName: gestureName,
-      frameIndex: this.currentFrameIndex,
-    };
-
-    this.currentFrames.push(frame);
-    this.currentFrameIndex++;
-
-    // Feedback visual
-    this.canvasElement.classList.add("recording");
-    setTimeout(() => {
-      this.canvasElement.classList.remove("recording");
-    }, 300);
-
-    this.updateSequenceStatus();
-
-    if (this.currentFrameIndex >= this.maxFramesPerGesture) {
-      this.statusText.textContent = `Frame ${this.currentFrameIndex} capturado - Secuencia completa, presiona "Finalizar"`;
-      document.getElementById("captureBtn").disabled = true;
-    } else {
-      this.statusText.textContent = `Frame ${
-        this.currentFrameIndex
-      } capturado - Listo para Frame ${this.currentFrameIndex + 1}`;
-    }
   }
 
   clearCurrentFrames() {
@@ -683,10 +730,15 @@ class GestureCaptureSystem {
       return;
     }
 
+    // Procesar frame actual con normalización
+    const frameData = this.processarFrameParaCaptura(results);
+    if (!frameData) return;
+
     // Crear frame actual para comparación
     const currentFrame = {
-      landmarks: results.multiHandLandmarks,
-      handedness: results.multiHandedness || [],
+      landmarks: frameData.landmarks,
+      landmarksNormalizados: frameData.landmarksNormalizados,
+      handedness: frameData.handedness,
       timestamp: Date.now(),
     };
 
@@ -739,36 +791,42 @@ class GestureCaptureSystem {
   }
 
   calculateFrameSimilarity(frame1, frame2) {
-    if (
-      !frame1.landmarks ||
-      !frame2.landmarks ||
-      frame1.landmarks.length === 0 ||
-      frame2.landmarks.length === 0
-    ) {
+    // Usar landmarks normalizados si están disponibles, sino normalizar sobre la marcha
+    let landmarks1, landmarks2;
+    
+    if (frame1.landmarksNormalizados) {
+      landmarks1 = frame1.landmarksNormalizados;
+    } else if (frame1.landmarks && frame1.landmarks.length > 0) {
+      landmarks1 = this.normalizarLandmarks(frame1.landmarks[0]);
+    } else {
       return 0;
     }
-
-    const landmarks1 = frame1.landmarks[0]; // Primera mano
-    const landmarks2 = frame2.landmarks[0]; // Primera mano
+    
+    if (frame2.landmarksNormalizados) {
+      landmarks2 = frame2.landmarksNormalizados;
+    } else if (frame2.landmarks && frame2.landmarks.length > 0) {
+      landmarks2 = this.normalizarLandmarks(frame2.landmarks[0]);
+    } else {
+      return 0;
+    }
 
     if (!landmarks1 || !landmarks2 || landmarks1.length !== landmarks2.length) {
       return 0;
     }
 
-    // Calcular distancia euclidiana normalizada
+    // Calcular distancia euclidiana entre landmarks normalizados
     let totalDistance = 0;
     let validPoints = 0;
 
     for (let i = 0; i < landmarks1.length; i++) {
-      const p1 = landmarks1[i];
-      const p2 = landmarks2[i];
+      const lm1 = landmarks1[i];
+      const lm2 = landmarks2[i];
 
-      if (p1 && p2) {
-        const distance = Math.sqrt(
-          Math.pow(p1.x - p2.x, 2) +
-            Math.pow(p1.y - p2.y, 2) +
-            Math.pow((p1.z || 0) - (p2.z || 0), 2)
-        );
+      if (lm1 && lm2) {
+        const dx = lm1.x - lm2.x;
+        const dy = lm1.y - lm2.y;
+        const dz = (lm1.z || 0) - (lm2.z || 0);
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         totalDistance += distance;
         validPoints++;
       }
@@ -777,8 +835,9 @@ class GestureCaptureSystem {
     if (validPoints === 0) return 0;
 
     // Convertir distancia a similitud (0-1)
+    // Con landmarks normalizados, las distancias son más consistentes
     const avgDistance = totalDistance / validPoints;
-    const similarity = Math.max(0, 1 - avgDistance * 3); // Factor de escala ajustable
+    const similarity = Math.max(0, 1 - avgDistance * 1.5); // Factor ajustado para landmarks normalizados
 
     return similarity;
   }
@@ -952,6 +1011,51 @@ class GestureCaptureSystem {
 
   saveSavedGestures() {
     localStorage.setItem("savedGestures", JSON.stringify(this.savedGestures));
+  }
+
+  // === FUNCIONES DEL MODAL DE NORMALIZACIÓN ===
+  showNormalizationModal() {
+    const modal = document.getElementById("normalizationModal");
+    modal.style.display = "block";
+    
+    // Añadir información en tiempo real si hay manos detectadas
+    if (this.lastResults && this.lastResults.multiHandLandmarks) {
+      this.showLiveNormalizationDemo();
+    }
+  }
+
+  hideNormalizationModal() {
+    const modal = document.getElementById("normalizationModal");
+    modal.style.display = "none";
+  }
+
+  showLiveNormalizationDemo() {
+    // Esta función podría mostrar en tiempo real cómo se ven los landmarks 
+    // antes y después de la normalización
+    console.log("🔬 Demostración de normalización en tiempo real");
+    
+    if (this.lastResults && this.lastResults.multiHandLandmarks) {
+      const landmarks = this.lastResults.multiHandLandmarks[0];
+      const centroide = this.calcularCentroide(landmarks);
+      const landmarksNormalizados = this.normalizarLandmarks(landmarks);
+      
+      console.log("📍 Centroide calculado:", centroide);
+      console.log("📊 Landmarks originales (primeros 3):", landmarks.slice(0, 3));
+      console.log("🎯 Landmarks normalizados (primeros 3):", landmarksNormalizados.slice(0, 3));
+      
+      // Mostrar estadísticas en la consola
+      const rangoOriginalX = {
+        min: Math.min(...landmarks.map(lm => lm.x)),
+        max: Math.max(...landmarks.map(lm => lm.x))
+      };
+      const rangoNormalizadoX = {
+        min: Math.min(...landmarksNormalizados.map(lm => lm.x)),
+        max: Math.max(...landmarksNormalizados.map(lm => lm.x))
+      };
+      
+      console.log("📏 Rango X original:", rangoOriginalX);
+      console.log("🎯 Rango X normalizado:", rangoNormalizadoX);
+    }
   }
 }
 
